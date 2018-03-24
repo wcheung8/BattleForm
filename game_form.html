@@ -5,7 +5,8 @@
 <style>
 canvas {
     border:1px solid #d3d3d3;
-    background-color: #FFFFFF;
+   background-image: url("background.png");
+   background-color: #FFFFFF;
 }
 </style>
 </head>
@@ -31,18 +32,20 @@ var playerHealth = 3;
 var enemyWidth = 50;
 var enemyHeight = 50;
 var enemySpeed = 5;
+var enemyHealth = 2;
 
 var bossWidth = 100;
 var bossHeight = 100;
 var bossSpeed = 5;
+var bossHealth = 10;
 
 var bulletWidth = 5;
 var bulletHeight = 5;
 var bulletSpeed = 50;
 
 function startGame() {
-    player = new component(50, 30, "plane.png", 10, 120, "image");
-	score = new component("30px", "Consolas", "black", 40, 40, "text");
+    player = new component(50, 30, "plane.png", 10, 120, playerHealth, "image");
+	score = new component("30px", "Consolas", "black", 40, 40, -1, "text");
     hit = new sound("bounce.mp3");
     music = new sound("gametheme.mp3");
     music.play();
@@ -67,7 +70,8 @@ var playArea = {
     }
 }
 
-function component(width, height, color, x, y, type = "color") {
+function component(width, height, color, x, y, health = 1,type = "color") {
+	
 	this.type = type;
 	if (type == "image") {
 		this.image = new Image();
@@ -79,16 +83,19 @@ function component(width, height, color, x, y, type = "color") {
 	this.speedY = 0;
 	this.x = x;
 	this.y = y;
+	this.health = health;
+	this.currHealth = health;
+	
 	this.update = function() {
 		ctx = playArea.context;
 		if (type == "image") {
 			ctx.drawImage(this.image,
 			this.x,
 			this.y,
-			this.width, this.height);
+			 Math.floor(this.width * (this.currHealth/this.health)),  Math.floor(this.height * (this.currHealth/this.health)));
 		} else if (type == "color") {
 			ctx.fillStyle = color;
-			ctx.fillRect(this.x, this.y, this.width, this.height);
+			ctx.fillRect(this.x, this.y, Math.floor(this.width * (this.currHealth/this.health)),  Math.floor(this.height * (this.currHealth/this.health)));
 		} else if (this.type == "text") {
 			ctx.font = this.width + " " + this.height;
 			ctx.fillStyle = color;
@@ -139,10 +146,11 @@ function component(width, height, color, x, y, type = "color") {
 
         return true;
     }
+
 }
 
 function updateGameArea() {
-
+	
 	// check player collision with enemies
     for (i = 0; i < enemies.length; i += 1) {
         if (player.crashWith(enemies[i])) {
@@ -185,9 +193,14 @@ function updateGameArea() {
 			var j = bullets.length - 1;
 			while (j > -1) {
 				if (enemies[i].crashWith(bullets[j])) {
-					enemies.splice(i, 1);
+					enemies[i].currHealth -= playerStrength;
+					enemies[i].x += Math.floor(enemies[i].width / enemies[i].health / 2);
+					enemies[i].y += Math.floor(enemies[i].height / enemies[i].health / 2);
+					if (enemies[i].currHealth <= 0) {
+						enemies.splice(i, 1);
+						gold += 100;
+					}
 					bullets.splice(j, 1);
-					gold += 100;
 					continue;
 				}
 				j--;
@@ -196,15 +209,42 @@ function updateGameArea() {
 		}
 	}
 
+	
+	i = bosses.length - 1;
+	j = bullets.length - 1;
+	if( i >= 0 && j >= 0) {
+
+		while (i > -1) {
+			var j = bullets.length - 1;
+			while (j > -1) {
+				if (bosses[i].crashWith(bullets[j])) {
+					bosses[i].currHealth -= playerStrength;
+					bosses[i].x += Math.floor(bosses[i].width / bosses[i].health / 2);
+					bosses[i].y += Math.floor(bosses[i].height / bosses[i].health / 2);
+					if (bosses[i].currHealth <= 0) {
+						bosses = []
+						gold += 1000;
+					}
+					bullets.splice(j, 1);
+					continue;
+				}
+				j--;
+			}
+			i--;
+		}
+	}
+	
     playArea.clear();
     playArea.frameNo += 1;
 
 	// spawn boss
-    if (everyinterval(1000)) {
-        x = playArea.canvas.width - bossWidth;
-		y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
+    if (everyinterval(100)) {
+		for (i = 0; i < 5; i += 1) {
+			x = playArea.canvas.width - bossWidth;
+			y = Math.floor((0.9*(i/4)+0.05)*(playArea.canvas.height - bossHeight));
 
-        bosses.push(new component(bossWidth, bossHeight, "green", x, y));
+			bosses.push(new component(bossWidth, bossHeight, "./emojis/"+ (i+1) +".png", x, y, bossHealth, "image"));
+		}
 	}
 
 	// spawn enemy
@@ -212,7 +252,7 @@ function updateGameArea() {
 		if (bosses.length <= 0){
 			x = playArea.canvas.width - enemyWidth;
 			y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
-			enemies.push(new component(enemyWidth, enemyHeight, "green", x, y));
+			enemies.push(new component(enemyWidth, enemyHeight, "green", x, y, health=enemyHealth));
 		}
 	}
 
@@ -272,7 +312,7 @@ function everyinterval(n) {
 }
 
 function shoot() {
-	bullets.push(new component(bulletWidth, bulletHeight, "orange", player.x, player.y + player.height/2));
+	bullets.push(new component(20, 10, "bullet.png", player.x + player.width, player.y + player.height/2, -1, "image"));
 }
 
 function gameOver() {
