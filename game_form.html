@@ -13,22 +13,30 @@ canvas {
 <script>
 
 var player;
-var obstacles = [];
+var enemies = [];
 var bullets = [];
 var Sound;
 var music;
 var up = false, down = false, left = false, right = false, shooting = false;
 
+var gold = 0;
 
 var playerStrength = 1;
 var playerSpeed = 5;
 var playerHealth = 3;
 
+
+var enemyWidth = 50;
+var enemyHeight = 50;
 var enemySpeed = 5;
-var bulletSpeed = 10;
+
+var bulletWidth = 5;
+var bulletHeight = 5;
+var bulletSpeed = 50;
 
 function startGame() {
     player = new component(50, 30, "plane.png", 10, 120, "image");
+	score = new component("30px", "Consolas", "black", 40, 40, "text");
     Sound = new sound("bounce.mp3");
     music = new sound("gametheme.mp3");
     music.play();
@@ -54,35 +62,40 @@ var playArea = {
 }
 
 function component(width, height, color, x, y, type = "color") {
-  this.type = type;
-  if (type == "image") {
-    this.image = new Image();
-    this.image.src = color;
-  }
-  this.width = width;
-  this.height = height;
-  this.speedX = 0;
-  this.speedY = 0;
-  this.x = x;
-  this.y = y;
-  this.update = function() {
-    ctx = playArea.context;
-    if (type == "image") {
-      ctx.drawImage(this.image,
-        this.x,
-        this.y,
-        this.width, this.height);
-    } else if (type == "color"){
-      ctx.fillStyle = color;
-      ctx.fillRect(this.x, this.y, this.width, this.height);
-    }
-  }
+	this.type = type;
+	if (type == "image") {
+		this.image = new Image();
+		this.image.src = color;
+	}
+	this.width = width;
+	this.height = height;
+	this.speedX = 0;
+	this.speedY = 0;
+	this.x = x;
+	this.y = y;
+	this.update = function() {
+		ctx = playArea.context;
+		if (type == "image") {
+			ctx.drawImage(this.image,
+			this.x,
+			this.y,
+			this.width, this.height);
+		} else if (type == "color") {
+			ctx.fillStyle = color;
+			ctx.fillRect(this.x, this.y, this.width, this.height);
+		} else if (this.type == "text") {
+			ctx.font = this.width + " " + this.height;
+			ctx.fillStyle = color;
+			ctx.fillText(this.text, this.x, this.y);
+		}
+	}
+	
     this.newPos = function() {
         this.x += this.speedX;
         this.y += this.speedY;
     }
 
-	this.checkOutOfBounds = function() {
+	this.isOutOfBounds = function() {
 
 		// get edges
 		var left = this.x;
@@ -124,44 +137,90 @@ function component(width, height, color, x, y, type = "color") {
 
 function updateGameArea() {
     var x, height, gap, minHeight, maxHeight, minGap, maxGap;
-    for (i = 0; i < obstacles.length; i += 1) {
-        if (player.crashWith(obstacles[i])) {
+	
+	// check player collision with enemies
+    for (i = 0; i < enemies.length; i += 1) {
+        if (player.crashWith(enemies[i])) {
             Sound.play();
-            music.stop();
-            playArea.stop();
-            return;
         }
     }
-    playArea.clear();
-    playArea.frameNo += 1;
-    if (playArea.frameNo == 1 || everyinterval(150)) {
-        x = playArea.canvas.width;
-        minHeight = 20;
-        maxHeight = playArea.canvas.height - 20;
-        height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
-        minGap = 50;
-        maxGap = 200;
-        gap = Math.floor(Math.random()*(maxGap-minGap+1)+minGap);
-        obstacles.push(new component(10, height, "green", x, 0));
-        obstacles.push(new component(10, x - height - gap, "green", x, height + gap));
-    }
-    for (i = 0; i < obstacles.length; i += 1) {
-        obstacles[i].x -= enemySpeed;
-        obstacles[i].update();
+	
+	// check enemy collision with boundaries
+	if (enemies.length > 0) {
+        if (enemies[0].isOutOfBounds()) {
+			enemies.shift();
+			gold -= 1000;
+		}
     }
 	
+	// check bullet collision with boundaries
+	if (bullets.length > 0) {
+        if (bullets[0].isOutOfBounds()) {
+			bullets.shift();
+		}
+    }
+	
+	
+	// check bullet collision with enemy
+	var i = enemies.length - 1;
+	var j = bullets.length - 1;
+	console.log(i + " " + j);
+	if( i >= 0 && j >= 0) {
+	
+		while (i > -1) {
+			var j = bullets.length - 1;
+			while (j > -1) {
+				if (enemies[i].crashWith(bullets[j])) {
+					enemies.splice(i, 1);
+					bullets.splice(j, 1);
+					gold += 100;
+					continue;
+				}
+				j--;
+			}
+			i--;
+		}
+	}
+	
+    playArea.clear();
+    playArea.frameNo += 1;
+	
+	// spawn enemy
+    if (playArea.frameNo == 1 || everyinterval(50)) {
+        x = playArea.canvas.width - 50;
+		y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
+		
+        enemies.push(new component(enemyWidth, enemyHeight, "green", x, y));
+	}
+	
+	// update all enemies
+    for (i = 0; i < enemies.length; i += 1) {
+        enemies[i].x -= enemySpeed;
+        enemies[i].update();
+    }
+	
+	
+	// update all bullets
 	for (i = 0; i < bullets.length; i += 1) {
         bullets[i].x += bulletSpeed;
         bullets[i].update();
     }
 	
-	if (playArea.frameNo == 1 || everyinterval(5)) {
-		if (shooting)
+	//check shooting
+	<!-- if (playArea.frameNo == 1 || everyinterval(10)) { -->
+		if (shooting && bullets.length == 0)
 			shoot();
-    }
+    <!-- } -->
+
 	
+	// update score
+    score.text="GOLD: " + gold;
+    score.update();	
+	
+	// update player
     player.newPos();
     player.update();
+	
 }
 
 // util
@@ -186,7 +245,7 @@ function everyinterval(n) {
 }
 
 function shoot() {
-	bullets.push(new component(5, 5, "orange", player.x, player.y + player.height/2));
+	bullets.push(new component(bulletWidth, bulletHeight, "orange", player.x, player.y + player.height/2));
 }
 
 // movement
