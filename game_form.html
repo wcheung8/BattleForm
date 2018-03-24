@@ -13,10 +13,13 @@ canvas {
 <script>
 
 var player;
-var enemies = [];
 var bullets = [];
+var bosses = [];
+var enemies = [];
+
 var Sound;
 var music;
+
 var up = false, down = false, left = false, right = false, shooting = false;
 
 var gold = 0;
@@ -25,10 +28,13 @@ var playerStrength = 1;
 var playerSpeed = 5;
 var playerHealth = 3;
 
-
 var enemyWidth = 50;
 var enemyHeight = 50;
 var enemySpeed = 5;
+
+var bossWidth = 100;
+var bossHeight = 100;
+var bossSpeed = 5;
 
 var bulletWidth = 5;
 var bulletHeight = 5;
@@ -37,7 +43,7 @@ var bulletSpeed = 50;
 function startGame() {
     player = new component(50, 30, "plane.png", 10, 120, "image");
 	score = new component("30px", "Consolas", "black", 40, 40, "text");
-    Sound = new sound("bounce.mp3");
+    hit = new sound("bounce.mp3");
     music = new sound("gametheme.mp3");
     music.play();
     playArea.start();
@@ -89,7 +95,7 @@ function component(width, height, color, x, y, type = "color") {
 			ctx.fillText(this.text, this.x, this.y);
 		}
 	}
-	
+
     this.newPos = function() {
         this.x += this.speedX;
         this.y += this.speedY;
@@ -107,7 +113,7 @@ function component(width, height, color, x, y, type = "color") {
 		if ((top < 0) || (bottom > playArea.canvas.height) || (left < 0) || (right > playArea.canvas.width)) {
 			return true;
 		}
-		
+
 		return false;
 
 	}
@@ -136,15 +142,15 @@ function component(width, height, color, x, y, type = "color") {
 }
 
 function updateGameArea() {
-    var x, height, gap, minHeight, maxHeight, minGap, maxGap;
-	
+
 	// check player collision with enemies
     for (i = 0; i < enemies.length; i += 1) {
         if (player.crashWith(enemies[i])) {
-            Sound.play();
+            hit.play();
+			gameOver();
         }
     }
-	
+
 	// check enemy collision with boundaries
 	if (enemies.length > 0) {
         if (enemies[0].isOutOfBounds()) {
@@ -152,7 +158,14 @@ function updateGameArea() {
 			gold -= 1000;
 		}
     }
-	
+
+	if (bosses.length > 0) {
+        if (bosses[0].isOutOfBounds()) {
+			bosses = [];
+			gameOver();
+		}
+    }
+
 	// check bullet collision with boundaries
 	if (bullets.length > 0) {
         if (bullets[0].isOutOfBounds()) {
@@ -160,13 +173,14 @@ function updateGameArea() {
 		}
     }
 	
+	// check player boundary collision
+	checkPlayer();
 	
 	// check bullet collision with enemy
 	var i = enemies.length - 1;
 	var j = bullets.length - 1;
-	console.log(i + " " + j);
 	if( i >= 0 && j >= 0) {
-	
+
 		while (i > -1) {
 			var j = bullets.length - 1;
 			while (j > -1) {
@@ -181,46 +195,59 @@ function updateGameArea() {
 			i--;
 		}
 	}
-	
+
     playArea.clear();
     playArea.frameNo += 1;
-	
-	// spawn enemy
-    if (playArea.frameNo == 1 || everyinterval(50)) {
-        x = playArea.canvas.width - 50;
+
+	// spawn boss
+    if (everyinterval(1000)) {
+        x = playArea.canvas.width - bossWidth;
 		y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
-		
-        enemies.push(new component(enemyWidth, enemyHeight, "green", x, y));
+
+        bosses.push(new component(bossWidth, bossHeight, "green", x, y));
 	}
-	
+
+	// spawn enemy
+    if (everyinterval(50)) {
+		if (bosses.length <= 0){
+			x = playArea.canvas.width - enemyWidth;
+			y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
+			enemies.push(new component(enemyWidth, enemyHeight, "green", x, y));
+		}
+	}
+
 	// update all enemies
     for (i = 0; i < enemies.length; i += 1) {
         enemies[i].x -= enemySpeed;
         enemies[i].update();
     }
-	
-	
+
+	// update all bosses
+    for (i = 0; i < bosses.length; i += 1) {
+        bosses[i].x -= bossSpeed;
+        bosses[i].update();
+    }
+
 	// update all bullets
 	for (i = 0; i < bullets.length; i += 1) {
         bullets[i].x += bulletSpeed;
         bullets[i].update();
     }
-	
-	//check shooting
-	<!-- if (playArea.frameNo == 1 || everyinterval(10)) { -->
-		if (shooting && bullets.length == 0)
-			shoot();
-    <!-- } -->
 
-	
+	//check shooting
+	if (playArea.frameNo == 1 || everyinterval(10)) {
+		if (shooting)
+			shoot();
+    }
+
 	// update score
     score.text="GOLD: " + gold;
-    score.update();	
-	
+    score.update();
+
 	// update player
     player.newPos();
     player.update();
-	
+
 }
 
 // util
@@ -246,6 +273,31 @@ function everyinterval(n) {
 
 function shoot() {
 	bullets.push(new component(bulletWidth, bulletHeight, "orange", player.x, player.y + player.height/2));
+}
+
+function gameOver() {
+
+}
+
+function checkPlayer() {
+	var left = player.x;
+	var right = player.x + (player.width);
+	var top = player.y;
+	var bottom = player.y + (player.height)
+	if (top < 0) { 
+		player.speedY = Math.max(0, player.speedY);
+	}
+	if (bottom > playArea.canvas.height) {
+		player.speedY = Math.min(0, player.speedY);
+	}
+	
+	if (left < 0) {
+		player.speedX = Math.max(0, player.speedX);
+	}
+	
+	if (right > playArea.canvas.width) {
+		player.speedX = Math.min(0, player.speedX);
+	}
 }
 
 // movement
