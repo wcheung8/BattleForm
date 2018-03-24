@@ -5,7 +5,7 @@
 <style>
 canvas {
     border:1px solid #d3d3d3;
-    background-color: #f1f1f1;
+    background-color: #FFFFFF;
 }
 </style>
 </head>
@@ -24,8 +24,11 @@ var playerStrength = 1;
 var playerSpeed = 5;
 var playerHealth = 3;
 
+var enemySpeed = 5;
+var bulletSpeed = 10;
+
 function startGame() {
-    player = new component(30, 30, "red", 10, 120);
+    player = new component(50, 30, "plane.png", 10, 120, "image");
     Sound = new sound("bounce.mp3");
     music = new sound("gametheme.mp3");
     music.play();
@@ -35,8 +38,8 @@ function startGame() {
 var playArea = {
     canvas : document.createElement("canvas"),
     start : function() {
-        this.canvas.width = 480;
-        this.canvas.height = 270;
+        this.canvas.width = window.innerWidth - 10;
+		this.canvas.height = window.innerHeight - 30;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.frameNo = 0;
@@ -50,18 +53,30 @@ var playArea = {
     }
 }
 
-function component(width, height, color, x, y) {
-    this.width = width;
-    this.height = height;
-    this.speedX = 0;
-    this.speedY = 0;
-    this.x = x;
-    this.y = y;
-    this.update = function() {
-        ctx = playArea.context;
-        ctx.fillStyle = color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+function component(width, height, color, x, y, type = "color") {
+  this.type = type;
+  if (type == "image") {
+    this.image = new Image();
+    this.image.src = color;
+  }
+  this.width = width;
+  this.height = height;
+  this.speedX = 0;
+  this.speedY = 0;
+  this.x = x;
+  this.y = y;
+  this.update = function() {
+    ctx = playArea.context;
+    if (type == "image") {
+      ctx.drawImage(this.image,
+        this.x,
+        this.y,
+        this.width, this.height);
+    } else if (type == "color"){
+      ctx.fillStyle = color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
     }
+  }
     this.newPos = function() {
         this.x += this.speedX;
         this.y += this.speedY;
@@ -122,7 +137,7 @@ function updateGameArea() {
     if (playArea.frameNo == 1 || everyinterval(150)) {
         x = playArea.canvas.width;
         minHeight = 20;
-        maxHeight = 200;
+        maxHeight = playArea.canvas.height - 20;
         height = Math.floor(Math.random()*(maxHeight-minHeight+1)+minHeight);
         minGap = 50;
         maxGap = 200;
@@ -131,12 +146,12 @@ function updateGameArea() {
         obstacles.push(new component(10, x - height - gap, "green", x, height + gap));
     }
     for (i = 0; i < obstacles.length; i += 1) {
-        obstacles[i].x -= 1;
+        obstacles[i].x -= enemySpeed;
         obstacles[i].update();
     }
 	
 	for (i = 0; i < bullets.length; i += 1) {
-        bullets[i].x += 6;
+        bullets[i].x += bulletSpeed;
         bullets[i].update();
     }
 	
