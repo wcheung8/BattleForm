@@ -20,10 +20,11 @@ var enemies = [];
 
 var Sound;
 var music;
-
+var laser;
 var up = false, down = false, left = false, right = false, shooting = false;
 
 var gold = 0;
+var lockout = 0;
 
 var playerStrength = 1;
 var playerSpeed = 5;
@@ -47,6 +48,7 @@ function startGame() {
     player = new component(50, 30, "plane.png", 10, 120, playerHealth, "image");
 	score = new component("30px", "Consolas", "black", 40, 40, -1, "text");
     hit = new sound("bounce.mp3");
+    laser = new sound("laser.mp3");
     music = new sound("gametheme.mp3");
     music.play();
     playArea.start();
@@ -224,6 +226,8 @@ function updateGameArea() {
 					if (bosses[i].currHealth <= 0) {
 						bosses = []
 						gold += 1000;
+						sendResponse(i+1);
+						
 					}
 					bullets.splice(j, 1);
 					continue;
@@ -238,7 +242,7 @@ function updateGameArea() {
     playArea.frameNo += 1;
 
 	// spawn boss
-    if (everyinterval(100)) {
+    if (everyinterval(1000)) {
 		for (i = 0; i < 5; i += 1) {
 			x = playArea.canvas.width - bossWidth;
 			y = Math.floor((0.9*(i/4)+0.05)*(playArea.canvas.height - bossHeight));
@@ -252,7 +256,7 @@ function updateGameArea() {
 		if (bosses.length <= 0){
 			x = playArea.canvas.width - enemyWidth;
 			y = Math.floor((Math.random()*0.9+0.05)*(playArea.canvas.height - enemyHeight));
-			enemies.push(new component(enemyWidth, enemyHeight, "green", x, y, health=enemyHealth));
+			enemies.push(new component(enemyWidth, enemyHeight, "./emojis/poop.png", x, y, enemyHealth, "image"));
 		}
 	}
 
@@ -275,10 +279,10 @@ function updateGameArea() {
     }
 
 	//check shooting
-	if (playArea.frameNo == 1 || everyinterval(10)) {
-		if (shooting)
-			shoot();
-    }
+	if (shooting && lockout <= playArea.frameNo) {
+		shoot();
+		lockout = playArea.frameNo + 15;
+	}
 
 	// update score
     score.text="GOLD: " + gold;
@@ -312,6 +316,7 @@ function everyinterval(n) {
 }
 
 function shoot() {
+    laser.play();
 	bullets.push(new component(20, 10, "bullet.png", player.x + player.width, player.y + player.height/2, -1, "image"));
 }
 
@@ -397,6 +402,45 @@ this.addEventListener('keyup', (event) => {
 	updateKey();
 
 })
+
+function sendResponse(emoji) {
+
+	// find user id through get param
+	var url_string = window.location.href;
+	var url = new URL(url_string);
+	var USER_ID = url.searchParams.get("USER_ID");
+	console.log(USER_ID);
+
+
+	// ready post request
+	var xhr = new XMLHttpRequest();
+	var url = "https://ro8nthoq5g.execute-api.us-east-2.amazonaws.com/dev/queryDB";
+	xhr.open("POST", url, true);
+	xhr.setRequestHeader("Content-type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			var json = JSON.parse(xhr.responseText);
+			console.log(json);
+		}
+	};
+	
+	// create payload
+	var d = new Date();
+	var ts = Math.round((new Date()).getTime() / 1000);
+	var data = JSON.stringify(
+		{"operation": "insert",
+		 "payload": {
+		   "MESSAGE_ID": ts,
+		   "USER_ID": USER_ID,
+		   "EMOJI": emoji,
+		   "TS_CREATED": String(d)
+		 }});
+		 
+		 
+	// submit
+	xhr.send(data);
+
+}
 
 </script>
 </body>
