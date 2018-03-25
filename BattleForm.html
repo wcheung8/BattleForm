@@ -10,6 +10,9 @@ canvas {
 }
 </style>
 </head>
+
+<link rel="icon" type="image/png"
+ href="./plane.ico" />
 <body onload="startGame()">
 <button onclick="upgradeSpeed()">Speed - 1000g</button> 
 <button onclick="upgradeStrength()">Strength - 1000g</button> 
@@ -28,6 +31,9 @@ var enemies = [];
 var Sound;
 var music;
 var laser;
+var prompt;
+var questions = ["Shoot the boss that best describes your most recent experience!"];
+var counter = 0;
 var up = false, down = false, left = false, right = false, shooting = false;
 
 var gold = 1000;
@@ -39,12 +45,12 @@ var playerHealth = 3;
 
 var enemyWidth = 50;
 var enemyHeight = 50;
-var enemySpeed = 5;
+var enemySpeed = 3;
 var enemyHealth = 2;
 
 var bossWidth = 100;
 var bossHeight = 100;
-var bossSpeed = 5;
+var bossSpeed = 1;
 var bossHealth = 10;
 
 var bulletWidth = 5;
@@ -54,6 +60,8 @@ var bulletSpeed = 50;
 function startGame() {
     player = new component(50, 30, "plane.png", 10, 120, playerHealth, "image");
 	score = new component("30px", "Consolas", "black", 40, 40, -1, "text");
+	prompt = new component("30px", "Consolas", "black", 250, 650, -1, "text");
+	prompt.text = "";
     hit = new sound("bounce.mp3");
     laser = new sound("laser.mp3");
     music = new sound("gametheme.mp3");
@@ -237,6 +245,7 @@ function updateGameArea() {
 						gold += 1000;
 						sendResponse(i+1);
 						increaseDifficulty();
+						prompt.text = "";
 					}
 					bullets.splice(j, 1);
 					continue;
@@ -252,6 +261,9 @@ function updateGameArea() {
 
 	// spawn boss
     if (everyinterval(1000)) {
+		
+		prompt.text = questions[counter % questions.length];
+		
 		for (i = 0; i < 5; i += 1) {
 			x = playArea.canvas.width - bossWidth;
 			y = Math.floor((0.9*(i/4)+0.05)*(playArea.canvas.height - bossHeight));
@@ -294,8 +306,10 @@ function updateGameArea() {
 	}
 
 	// update score
+	gold++;
     score.text="GOLD: " + gold;
     score.update();
+	prompt.update();
 
 	// update player
     player.newPos();
@@ -332,22 +346,24 @@ function shoot() {
 function gameOver() {
 	bosses = [];
 	enemies = [];
-	player = new component(50, 30, "plane.png", 10, 120, playerHealth, "image");
-	playArea.frameNo = 0
-	gold = 1000
+	player.x = 30;
+	player.y = 50;
+	playArea.frameNo = 0;
+	gold = 1000;
+	prompt.text = "";
 }
 
 function upgradeSpeed() {
 	if(gold >= 1000) {
 		playerSpeed += 1;
-		gold -= 1000
+		gold -= 1000;
 	}
 }
 
 function upgradeStrength() {
 	if(gold >= 1000) {
 		playerStrength += 1;
-		gold -= 1000
+		gold -= 1000;
 	}
 }
 
