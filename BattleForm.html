@@ -11,7 +11,14 @@ canvas {
 </style>
 </head>
 <body onload="startGame()">
+<button onclick="upgradeSpeed()">Speed - 1000g</button> 
+<button onclick="upgradeStrength()">Strength - 1000g</button> 
+ 
+<b>User ID</b> <input id="userid"> <button onclick="USER_ID = document.getElementById('userid').value;"> Confirm</button>
+
 <script>
+
+var USER_ID;
 
 var player;
 var bullets = [];
@@ -23,7 +30,7 @@ var music;
 var laser;
 var up = false, down = false, left = false, right = false, shooting = false;
 
-var gold = 0;
+var gold = 1000;
 var lockout = 0;
 
 var playerStrength = 1;
@@ -50,6 +57,8 @@ function startGame() {
     hit = new sound("bounce.mp3");
     laser = new sound("laser.mp3");
     music = new sound("gametheme.mp3");
+	enemies = []
+	bosses = []
     music.play();
     playArea.start();
 }
@@ -58,7 +67,7 @@ var playArea = {
     canvas : document.createElement("canvas"),
     start : function() {
         this.canvas.width = window.innerWidth - 10;
-		this.canvas.height = window.innerHeight - 30;
+		this.canvas.height = window.innerHeight - 50;
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.frameNo = 0;
@@ -165,7 +174,7 @@ function updateGameArea() {
 	if (enemies.length > 0) {
         if (enemies[0].isOutOfBounds()) {
 			enemies.shift();
-			gold -= 1000;
+			gold -= 200;
 		}
     }
 
@@ -196,8 +205,8 @@ function updateGameArea() {
 			while (j > -1) {
 				if (enemies[i].crashWith(bullets[j])) {
 					enemies[i].currHealth -= playerStrength;
-					enemies[i].x += Math.floor(enemies[i].width / enemies[i].health / 2);
-					enemies[i].y += Math.floor(enemies[i].height / enemies[i].health / 2);
+					enemies[i].x += Math.floor(enemies[i].width / enemies[i].health / 2 * playerStrength);
+					enemies[i].y += Math.floor(enemies[i].height / enemies[i].health / 2 * playerStrength);
 					if (enemies[i].currHealth <= 0) {
 						enemies.splice(i, 1);
 						gold += 100;
@@ -221,13 +230,13 @@ function updateGameArea() {
 			while (j > -1) {
 				if (bosses[i].crashWith(bullets[j])) {
 					bosses[i].currHealth -= playerStrength;
-					bosses[i].x += Math.floor(bosses[i].width / bosses[i].health / 2);
-					bosses[i].y += Math.floor(bosses[i].height / bosses[i].health / 2);
+					bosses[i].x += Math.floor(bosses[i].width / bosses[i].health / 2 * playerStrength);
+					bosses[i].y += Math.floor(bosses[i].height / bosses[i].health / 2 * playerStrength);
 					if (bosses[i].currHealth <= 0) {
 						bosses = []
 						gold += 1000;
 						sendResponse(i+1);
-						
+						increaseDifficulty();
 					}
 					bullets.splice(j, 1);
 					continue;
@@ -321,7 +330,32 @@ function shoot() {
 }
 
 function gameOver() {
+	bosses = [];
+	enemies = [];
+	player = new component(50, 30, "plane.png", 10, 120, playerHealth, "image");
+	playArea.frameNo = 0
+	gold = 1000
+}
 
+function upgradeSpeed() {
+	if(gold >= 1000) {
+		playerSpeed += 1;
+		gold -= 1000
+	}
+}
+
+function upgradeStrength() {
+	if(gold >= 1000) {
+		playerStrength += 1;
+		gold -= 1000
+	}
+}
+
+function increaseDifficulty() {
+	bossHealth++;
+	enemyHealth++;
+	enemySpeed++;
+	bossSpeed++;
 }
 
 function checkPlayer() {
@@ -408,7 +442,6 @@ function sendResponse(emoji) {
 	// find user id through get param
 	var url_string = window.location.href;
 	var url = new URL(url_string);
-	var USER_ID = url.searchParams.get("USER_ID");
 	console.log(USER_ID);
 
 
